@@ -5,6 +5,6 @@
 
 (define-foreign-library libipopt
   (:unix "libipopt.so.1")
-  (t (:default "IpOptFSS")))
+  (t (:default "IpOpt-vc10")))
 
 (use-foreign-library libipopt)
