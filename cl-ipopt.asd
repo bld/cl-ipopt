@@ -6,4 +6,5 @@
   :serial t
   :components
   ((:file "package")
+   (:file "swig")
    (:file "ipopt")))
