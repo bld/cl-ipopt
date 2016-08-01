@@ -17,7 +17,7 @@
 	(x3 (mem-aref x :double 3)))
     (setf (mem-aref grad_f :double 0) (+ (* x0 x3) (* x3 (+ x0 x1 x2)))
 	  (mem-aref grad_f :double 1) (* x0 x3)
-	  (mem-aref grad_f :double 2) (+ (* x0 x3) 1)
+	  (mem-aref grad_f :double 2) (+ (* x0 x3) 1d0)
 	  (mem-aref grad_f :double 3) (* x0 (+ x0 x1 x2))))
   1)
 
@@ -33,19 +33,19 @@
   1)
 
 (defcallback eval_jac_g :int ((n :int) (x :pointer) (new_x :int) (m :int) (nele_jac :int) (irow :pointer) (jcol :pointer) (values :pointer))
-  (let ((x0 (mem-aref x :double 0))
-	(x1 (mem-aref x :double 1))
-	(x2 (mem-aref x :double 2))
-	(x3 (mem-aref x :double 3)))
-    (if (null-pointer-p values) ;; Return Jacobian structure
-	(setf (mem-aref irow :int 0) 0 (mem-aref jcol :int 0) 0
-	      (mem-aref irow :int 1) 0 (mem-aref jcol :int 1) 1
-	      (mem-aref irow :int 2) 0 (mem-aref jcol :int 2) 2
-	      (mem-aref irow :int 3) 0 (mem-aref jcol :int 3) 3
-	      (mem-aref irow :int 4) 1 (mem-aref jcol :int 4) 0
-	      (mem-aref irow :int 5) 1 (mem-aref jcol :int 5) 1
-	      (mem-aref irow :int 6) 1 (mem-aref jcol :int 6) 2
-	      (mem-aref irow :int 7) 1 (mem-aref jcol :int 7) 3)
+  (if (null-pointer-p values) ;; Return Jacobian structure
+      (setf (mem-aref irow :int 0) 0 (mem-aref jcol :int 0) 0
+	    (mem-aref irow :int 1) 0 (mem-aref jcol :int 1) 1
+	    (mem-aref irow :int 2) 0 (mem-aref jcol :int 2) 2
+	    (mem-aref irow :int 3) 0 (mem-aref jcol :int 3) 3
+	    (mem-aref irow :int 4) 1 (mem-aref jcol :int 4) 0
+	    (mem-aref irow :int 5) 1 (mem-aref jcol :int 5) 1
+	    (mem-aref irow :int 6) 1 (mem-aref jcol :int 6) 2
+	    (mem-aref irow :int 7) 1 (mem-aref jcol :int 7) 3)
+      (let ((x0 (mem-aref x :double 0))
+	    (x1 (mem-aref x :double 1))
+	    (x2 (mem-aref x :double 2))
+	    (x3 (mem-aref x :double 3)))
 	(setf
 	 (mem-aref values :double 0) (* x1 x2 x3) ; 0,0
 	 (mem-aref values :double 1) (* x0 x2 x3) ; 0,1
@@ -58,51 +58,50 @@
 	 (mem-aref values :double 7) (* 2 x3)))) ; 1,3
   1)
 
-(defcallback eval_h :int ((n :int) (x :pointer) (new_x :int) (obj_factor :double) (m :int) (lmb :pointer) (new_lmb :int) (nele_hess :int) (irow :int) (jcol :int) (values :pointer))
-  (let ((x0 (mem-aref x :double 0))
-	(x1 (mem-aref x :double 1))
-	(x2 (mem-aref x :double 2))
-	(x3 (mem-aref x :double 3))
-	(lmb0 (mem-aref lmb :double 0))
-	(lmb1 (mem-aref lmb :double 1)))
-    (if (null-pointer-p values) ;; Return Hessian structure
-	(let ((i 0))
-	  (dotimes (row 4)
-	    (dotimes (col (1+ row))
-	      (setf (mem-aref irow :int i) row
-		    (mem-aref jcol :int i) col)
-	      (incf i)))
-	  (assert (= i nele_hess)))
-	;; Return the values. Symmetric, fill lower left
-	;; Fill objective portion
-	(progn
-	  (setf (mem-aref values :double 0) (* obj_factor 2 x3) ; 0,0
-		(mem-aref values :double 1) (* obj_factor x3) ; 1,0
-		(mem-aref values :double 2) 0 ; 1,1
-		
-		(mem-aref values :double 3) (* obj_factor x3) ; 2,0
-		(mem-aref values :double 4) 0 ; 2,1
-		(mem-aref values :double 5) 0 ; 2,2
-		
-		(mem-aref values :double 6) (* obj_factor (+ (* 2 x0) x1 x2)) ; 3,0
-		(mem-aref values :double 7) (* obj_factor x0) ; 3,1
-		(mem-aref values :double 8) (* obj_factor x0) ; 3,2
-		(mem-aref values :double 9) 0) ; 3,3
-	  ;; Add portion for the 1st constraint
-	  (incf (mem-aref values :double 1) (* lmb0 x2 x3)) ; 1,0
-	  
-	  (incf (mem-aref values :double 3) (* lmb0 x1 x3)) ; 2,0
-	  (incf (mem-aref values :double 4) (* lmb0 x0 x3)) ; 2,1
-	  
-	  (incf (mem-aref values :double 6) (* lmb0 x1 x2)) ; 3,0
-	  (incf (mem-aref values :double 7) (* lmb0 x0 x2)) ; 3,1
-	  (incf (mem-aref values :double 8) (* lmb0 x0 x1)) ; 3,2
-	  
-	  ;; Add portion for the 2nd constraint
-	  (incf (mem-aref values :double 0) (* lmb1 2)) ; 0,0
-	  (incf (mem-aref values :double 2) (* lmb1 2)) ; 1,1
-	  (incf (mem-aref values :double 5) (* lmb1 2)) ; 2,2
-	  (incf (mem-aref values :double 9) (* lmb1 2))))) ; 3,3
+(defcallback eval_h :int ((n :int) (x :pointer) (new_x :int) (obj_factor :double) (m :int) (lmb :pointer) (new_lmb :int) (nele_hess :int) (irow :pointer) (jcol :pointer) (values :pointer))
+  (if (null-pointer-p values) ;; Return Hessian structure
+      (let ((i 0))
+	(dotimes (row 4)
+	  (dotimes (col (1+ row))
+	    (setf (mem-aref irow :int i) row
+		  (mem-aref jcol :int i) col)
+	    (incf i)))
+	(assert (= i nele_hess)))
+      ;; Return the values. Symmetric, fill lower left
+      ;; Fill objective portion
+      (let ((x0 (mem-aref x :double 0))
+	    (x1 (mem-aref x :double 1))
+	    (x2 (mem-aref x :double 2))
+	    (x3 (mem-aref x :double 3))
+	    (lmb0 (mem-aref lmb :double 0))
+	    (lmb1 (mem-aref lmb :double 1)))
+	(setf (mem-aref values :double 0) (* obj_factor 2 x3) ; 0,0
+	      (mem-aref values :double 1) (* obj_factor x3) ; 1,0
+	      (mem-aref values :double 2) 0d0 ; 1,1
+	      
+	      (mem-aref values :double 3) (* obj_factor x3) ; 2,0
+	      (mem-aref values :double 4) 0d0 ; 2,1
+	      (mem-aref values :double 5) 0d0 ; 2,2
+	      
+	      (mem-aref values :double 6) (* obj_factor (+ (* 2 x0) x1 x2)) ; 3,0
+	      (mem-aref values :double 7) (* obj_factor x0) ; 3,1
+	      (mem-aref values :double 8) (* obj_factor x0) ; 3,2
+	      (mem-aref values :double 9) 0d0) ; 3,3
+	;; Add portion for the 1st constraint
+	(incf (mem-aref values :double 1) (* lmb0 x2 x3)) ; 1,0
+	
+	(incf (mem-aref values :double 3) (* lmb0 x1 x3)) ; 2,0
+	(incf (mem-aref values :double 4) (* lmb0 x0 x3)) ; 2,1
+	
+	(incf (mem-aref values :double 6) (* lmb0 x1 x2)) ; 3,0
+	(incf (mem-aref values :double 7) (* lmb0 x0 x2)) ; 3,1
+	(incf (mem-aref values :double 8) (* lmb0 x0 x1)) ; 3,2
+	
+	;; Add portion for the 2nd constraint
+	(incf (mem-aref values :double 0) (* lmb1 2)) ; 0,0
+	(incf (mem-aref values :double 2) (* lmb1 2)) ; 1,1
+	(incf (mem-aref values :double 5) (* lmb1 2)) ; 2,2
+	(incf (mem-aref values :double 9) (* lmb1 2)))) ; 3,3
   1)
 
 (defun test ()
@@ -135,5 +134,15 @@
 	      (mem-aref x :double 2) 5d0
 	      (mem-aref x :double 3) 1d0)
 	;; Solve problem
-	(ipoptsolve nlp x (null-pointer) obj (null-pointer) mult_x_l mult_x_u (null-pointer))
+	(let ((status (ipoptsolve nlp x (null-pointer) obj (null-pointer) mult_x_l mult_x_u (null-pointer))))
+	  (format t "Solution of the primal variables, x~%")
+	  (dotimes (i n)
+	    (format t "x[~a] = ~a~%" i (mem-aref x :double i)))
+	  (format t "Solution of the bound multipliers, z_L and z_U~%")
+	  (dotimes (i n)
+	    (format t "z_L[~a] = ~a~%" i (mem-aref mult_x_l :double i)))
+	  (dotimes (i n)
+	    (format t "z_U[~a] = ~a~%" i (mem-aref mult_x_u :double i)))
+	  (format t "Objective value~%f(x*) = ~a~%" (mem-ref obj :double)))
+	    
 	))))
