@@ -1,12 +1,15 @@
 (in-package :cl-ipopt)
 
+(defun eval_f_lisp (x)
+  (+ (* (aref x 0) (aref x 3) (+ (aref x 0) (aref x 1) (aref x 2))) (aref x 2)))
+
 (defcallback eval_f :int ((n :int) (x :pointer) (new_x :int) (obj_value :pointer))
   (assert (= n 4))
   (let ((x0 (mem-aref x :double 0))
 	(x1 (mem-aref x :double 1))
 	(x2 (mem-aref x :double 2))
 	(x3 (mem-aref x :double 3)))
-    (setf (mem-ref obj_value :double) (+ (* x0 x3 (+ x0 x1 x2)) x2)))
+    (setf (mem-ref obj_value :double) (eval_f_lisp (vector x0 x1 x2 x3))))
   1)
 
 (defcallback eval_grad_f :int ((n :int) (x :pointer) (new_x :int) (grad_f :pointer))
@@ -19,6 +22,23 @@
 	  (mem-aref grad_f :double 1) (* x0 x3)
 	  (mem-aref grad_f :double 2) (+ (* x0 x3) 1d0)
 	  (mem-aref grad_f :double 3) (* x0 (+ x0 x1 x2))))
+  1)
+
+(defcallback approx_grad_f :int ((n :int) (x :pointer) (new_x :int) (grad_f :pointer))
+  (assert (= n 4))
+  (let ((x0 (mem-aref x :double 0))
+	(x1 (mem-aref x :double 1))
+	(x2 (mem-aref x :double 2))
+	(x3 (mem-aref x :double 3)))
+    (let* ((xv (vector x0 x1 x2 x3))
+	   (stepsize (sqrt double-float-epsilon))
+	   (h (map 'vector #'(lambda (x) (* x stepsize)) xv))
+	   (xph (map 'vector #'+ xv h))
+	   (dx (map 'vector #'- xph xv))
+	   (f (eval_f_lisp xv))
+	   (fp (eval_f_lisp xph)))
+      (dotimes (i n)
+	(setf (mem-aref grad_f :double i) (/ (- f fp) (aref dx i))))))
   1)
 
 (defcallback eval_g :int ((n :int) (x :pointer) (new_x :int) (m :int) (g :pointer))
@@ -128,6 +148,8 @@
 	;; Set some options
 	(addipoptnumoption nlp "tol" 1d-9)
 	(addipoptstroption nlp "mu_strategy" "adaptive")
+	;;(addipoptstroption nlp "hessian_approximation" "limited-memory")
+	;;(addipoptstroption nlp "jacobian_approximation" "finite-difference-values")
 	;; Allocate space for initial point and set values
 	(setf (mem-aref x :double 0) 1d0
 	      (mem-aref x :double 1) 5d0
