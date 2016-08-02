@@ -31,14 +31,22 @@
 	(x2 (mem-aref x :double 2))
 	(x3 (mem-aref x :double 3)))
     (let* ((xv (vector x0 x1 x2 x3))
-	   (stepsize (sqrt double-float-epsilon))
-	   (h (map 'vector #'(lambda (x) (* x stepsize)) xv))
-	   (xph (map 'vector #'+ xv h))
-	   (dx (map 'vector #'- xph xv))
-	   (f (eval_f_lisp xv))
-	   (fp (eval_f_lisp xph)))
+	   (eps (sqrt double-float-epsilon))
+	   (hv (map 'vector #'(lambda (x) (* x eps)) xv))
+	   ;;(f-2 (eval_f_lisp (map 'vector #'- xv hv hv)))
+	   (f-1 (eval_f_lisp (map 'vector #'- xv hv)))
+	   ;;(f0 (eval_f_lisp xv))
+	   (f+1 (eval_f_lisp (map 'vector #'+ xv hv)))
+	   ;;(f+2 (eval_f_lisp (map 'vector #'+ xv hv hv)))
+	   )
       (dotimes (i n)
-	(setf (mem-aref grad_f :double i) (/ (- f fp) (aref dx i))))))
+	(setf (mem-aref grad_f :double i)
+	      (/
+	       (+ (* -1/2 f-1) (* 1/2 f+1))
+	       ;;(+ (* 1/12 f-2) (* -2/3 f-1) (* 2/3 f+1) (* -1/12 f+2))
+	       ;;(+ (* -3/2 f0) (* 2 f+1) (* -1/2 f+2))
+	       (aref hv i))
+	      ))))
   1)
 
 (defcallback eval_g :int ((n :int) (x :pointer) (new_x :int) (m :int) (g :pointer))
@@ -144,12 +152,12 @@
 	(setf (mem-aref x_l :double i) 1d0
 	      (mem-aref x_u :double i) 5d0))
 
-      (let ((nlp (createipoptproblem n x_l x_u m g_l g_u 8 10 0 (callback eval_f) (callback eval_g) (callback eval_grad_f) (callback eval_jac_g) (callback eval_h))))
+      (let ((nlp (createipoptproblem n x_l x_u m g_l g_u 8 10 0 (callback eval_f) (callback eval_g) (callback approx_grad_f) (callback eval_jac_g) (callback eval_h))))
 	;; Set some options
 	(addipoptnumoption nlp "tol" 1d-9)
 	(addipoptstroption nlp "mu_strategy" "adaptive")
-	;;(addipoptstroption nlp "hessian_approximation" "limited-memory")
-	;;(addipoptstroption nlp "jacobian_approximation" "finite-difference-values")
+	(addipoptstroption nlp "hessian_approximation" "limited-memory")
+	(addipoptstroption nlp "jacobian_approximation" "finite-difference-values")
 	;; Allocate space for initial point and set values
 	(setf (mem-aref x :double 0) 1d0
 	      (mem-aref x :double 1) 5d0
@@ -166,5 +174,4 @@
 	  (dotimes (i n)
 	    (format t "z_U[~a] = ~a~%" i (mem-aref mult_x_u :double i)))
 	  (format t "Objective value~%f(x*) = ~a~%" (mem-ref obj :double)))
-	    
 	))))
