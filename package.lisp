@@ -1,5 +1,5 @@
 (defpackage :cl-ipopt
-  (:use :cl :cffi))
+  (:use :cl :cffi :bld-ode))
 
 (in-package :cl-ipopt)
 

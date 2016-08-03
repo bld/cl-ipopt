@@ -2,7 +2,7 @@
   :author "Ben Diedrich"
   :license "MIT"
   :description "Common Lisp CFFI interface to IPOPT"
-  :depends-on ("cffi")
+  :depends-on ("cffi" "bld-ode")
   :serial t
   :components
   ((:file "package")

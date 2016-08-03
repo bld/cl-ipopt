@@ -89,6 +89,7 @@
 (defcallback eval_h :int ((n :int) (x :pointer) (new_x :int) (obj_factor :double) (m :int) (lmb :pointer) (new_lmb :int) (nele_hess :int) (irow :pointer) (jcol :pointer) (values :pointer))
   (if (null-pointer-p values) ;; Return Hessian structure
       (let ((i 0))
+	(print "Hessian structure")
 	(dotimes (row 4)
 	  (dotimes (col (1+ row))
 	    (setf (mem-aref irow :int i) row
@@ -165,7 +166,7 @@
 	      (mem-aref x :double 3) 1d0)
 	;; Solve problem
 	(let ((status (ipoptsolve nlp x (null-pointer) obj (null-pointer) mult_x_l mult_x_u (null-pointer))))
-	  (format t "Solution of the primal variables, x~%")
+	  (format t "~&Solution of the primal variables, x~%")
 	  (dotimes (i n)
 	    (format t "x[~a] = ~a~%" i (mem-aref x :double i)))
 	  (format t "Solution of the bound multipliers, z_L and z_U~%")
