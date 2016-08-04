@@ -7,7 +7,8 @@
   (let ((xv (make-array n)))
     (dotimes (i n)
       (setf (aref xv i) (mem-aref x :double i)))
-    (setf (mem-aref obj_value :double) (sail2d-f xv))))
+    (setf (mem-aref obj_value :double) (sail2d-f xv)))
+  1)
 
 (defcallback sail2d_grad_f :int ((n :int) (x :pointer) (new_x :int) (grad_f :pointer))
   (let* ((xv (make-array n :initial-contents (loop for i below n collect (mem-aref x :double i))))
