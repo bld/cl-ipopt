@@ -7,4 +7,6 @@
   :components
   ((:file "package")
    (:file "swig")
-   (:file "ipopt")))
+   (:file "ipopt")
+   (:file "hs071")
+   (:file "sail2d")))
