@@ -1,26 +1,15 @@
 (in-package :cl-ipopt)
 
-(defun sail2d-f (xv)
-  (aref xv (1- (length xv))))
-
 (defcallback sail2d_f :int ((n :int) (x :pointer) (new_x :int) (obj_value :pointer))
-  (let ((xv (make-array n)))
-    (dotimes (i n)
-      (setf (aref xv i) (mem-aref x :double i)))
-    (setf (mem-aref obj_value :double) (sail2d-f xv))))
-
-(defcallback sail2d_grad_f :int ((n :int) (x :pointer) (new_x :int) (grad_f :pointer))
-  (let* ((xv (make-array n :initial-contents (loop for i below n collect (mem-aref x :double i))))
-	 (eps (sqrt double-float-epsilon))
-	 (hv (map 'vector #'(lambda (x) (* x eps)) xv))
-	 (f-1 (sail2d-f (map 'vector #'- xv hv)))
-	 (f+1 (sail2d-f (map 'vector #'+ xv hv))))
-    (dotimes (i n)
-      (setf (mem-aref grad_f :double i)
-	    (/ (+ (* -1/2 f-1) (* 1/2 f+1))
-	       (aref hv i)))))
+  (setf (mem-aref obj_value :double) (mem-aref x :double (1- n)))
   1)
 
+(defcallback sail2d_grad_f :int ((n :int) (x :pointer) (new_x :int) (grad_f :pointer))
+  (dotimes (i (1- n))
+    (setf (mem-aref grad_f :double i) 0d0))
+  (setf (mem-aref grad_f :double (1- n)) 1d0)
+  1)
+  
 (defclass sail-data ()
   ((mu :initarg :mu)
    (lightness :initarg :lightness)
